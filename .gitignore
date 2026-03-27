@@ -133,3 +133,10 @@ temp.pdf
 .env
 *.pdf
 !tax_plan.pdf
+
+# Next.js & Node
+node_modules/
+.next/
+out/
+.vercel/
+

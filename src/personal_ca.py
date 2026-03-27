@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from .tax_engine import TaxEngine
 
 class PersonalCA:
     """
@@ -24,7 +25,7 @@ class PersonalCA:
         return max(0.0, min(limit_1, limit_2, limit_3))
 
     @staticmethod
-    def find_regime_breakeven(engine_old, engine_new, gross_income: float) -> Dict[str, Any]:
+    def find_regime_breakeven(engine_old: TaxEngine, engine_new: TaxEngine, gross_income: float) -> Dict[str, Any]:
         """
         Finds the exact Rs of deductions needed for Old Regime to equal New Regime.
         """
