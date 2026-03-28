@@ -1,21 +1,25 @@
-import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata } from 'next'
+import { Inter, Playfair_Display } from 'next/font/google'
+import './globals.css'
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
 
 export const metadata: Metadata = {
-  title: "Hyper-Personalized AI Tax Optimizer",
-  description: "Next-gen tax planning with premium Personal CA features.",
-};
+  title: 'Hyper-Personalized AI Tax Optimizer',
+  description: 'AI-powered personal finance & tax mentor for India.',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en">
-      <body className="bg-slate-950 text-slate-50 min-h-screen font-sans">
+      <body className={`${inter.variable} ${playfair.variable} font-sans antialiased min-h-screen selection:bg-lime selection:text-wealth-900`}>
         {children}
       </body>
     </html>
-  );
+  )
 }

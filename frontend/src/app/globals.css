@@ -2,12 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
+@layer base {
+  body {
+    background-color: #FDFDFD;
+    color: #0B0B0B;
+  }
 }
 
-body {
-    background-color: var(--background);
-    color: var(--foreground);
+::selection {
+  background-color: #C5E1A5;
+  color: #0F3D3E;
 }
