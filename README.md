@@ -21,6 +21,38 @@ The application is structured as a decoupled web application with the following 
 *   **Framer Motion**: Smooth, native-feeling component transitions.
 *   **Recharts**: Data visualization for the Tax Elimination Speedometer and Capital Deployment Bar Charts.
 
+### System Architecture
+```mermaid
+graph TD;
+    Client[Next.js React Client] -->|Fetch POST API| FastAPI[FastAPI Backend Server];
+    FastAPI -->|PDF/Image Bytes| Parser[PDF Parser Pipeline];
+    Parser -->|Local Regex| PDFPlumber[pdfplumber];
+    Parser -->|Cloud LLM| Gemini[Gemini Vision Model];
+    FastAPI -->|Structured Payload| Engine[Tax Computation Engine];
+    Engine -->|Slabs & Rule-of-3 HRA| Optimizer[PuLP LP Optimizer];
+    Optimizer -->|Liquidity & Risk Constraints| Output[JSON Action Plan];
+    Output --> Client;
+```
+
+### Data Flow Diagram
+```mermaid
+sequenceDiagram
+    participant User
+    participant NextJS as React Frontend
+    participant FastAPI as API Layer
+    participant Engine as Optimization Logic
+    
+    User->>NextJS: Uploads Form 16 (PDF)
+    NextJS->>FastAPI: POST /api/extract_pdf
+    FastAPI-->>NextJS: Extracted Gross Salary
+    User->>NextJS: Configures Risk Tolerance, Liquidity, Rent
+    NextJS->>FastAPI: POST /api/optimize
+    FastAPI->>Engine: Evaluates 87A Relief & LP Constraints
+    Engine-->>FastAPI: Structured Allocations & CA Insights
+    FastAPI-->>NextJS: JSON Results Payload
+    NextJS-->>User: Renders Tax Speedometer & Strategy
+```
+
 ## Key Features
 
 *   **Deterministic Tax Modeling**: Native handling of FY-keyed slabs, explicit Section 87A marginal relief computations, and conditional surcharge/cess additions without reliance on third-party calculators.
