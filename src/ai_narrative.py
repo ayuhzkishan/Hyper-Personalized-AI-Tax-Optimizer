@@ -8,13 +8,17 @@ class AINarrativeGenerator:
         if not self.use_ollama and self.api_key:
             self.client = genai.Client(api_key=self.api_key)
         
-    def generate_action_plan(self, tax_data, optimization_results) -> str:
+    def generate_action_plan(self, tax_data, optimization_results, regime_comparison) -> str:
         prompt = (
-            "You are an expert Indian CA. Explain this tax optimization plan in simple terms, "
-            "make it easy to understand for a typical working professional. Emphasize exactly what they "
-            "need to do before March 31. Do not hallucinate numbers."
+            "You are an elite Indian Executive Wealth Mentor. Explain this dynamically optimized tax plan in extremely clear, "
+            "confident terms to the user. You must specifically compare their Fully Optimized Old Regime versus the Fully Optimized New Regime "
+            "using the 'Regime Comparison' data payload provided.\n"
+            "1. Explicitly state the WINNING REGIME they should select.\n"
+            "2. List the explicit investments (e.g., precise amounts into 80C ELSS, 80D Health Insurance, Corporate NPS) required to achieve that minimum tax line before March 31.\n"
+            "3. Do not formulate arbitrary numbers. Keep the tone sophisticated, trust-inspiring, and concise (under 200 words if possible)."
             f"\n\nContext Data: {json.dumps(tax_data, default=str)}"
             f"\n\nOptimization Results: {json.dumps(optimization_results, default=str)}"
+            f"\n\nRegime Comparison: {json.dumps(regime_comparison, default=str)}"
         )
         
         if self.use_ollama:

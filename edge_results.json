@@ -1,0 +1,31 @@
+{
+  "TC1_standard_form16_clean.pdf": {
+    "status": "SUCCESS",
+    "gross": 1420400.0,
+    "old_tax": 232564.8,
+    "new_tax": 85082.4,
+    "recommended": "New"
+  },
+  "TC2_87A_rebate_boundary.pdf": {
+    "status": "SUCCESS",
+    "gross": 1150400.0,
+    "old_tax": 148324.8,
+    "new_tax": 0,
+    "recommended": "New"
+  },
+  "TC3_gig_worker_multi_source.pdf": {
+    "status": "FAILED_EXTRACTION",
+    "reason": "Pass 1 and 2 failed, and no Gemini API key provided for Pass 3 fallback. The format of the document is unrecognized."
+  },
+  "TC4_missing_corrupt_fields.pdf": {
+    "status": "FAILED_EXTRACTION",
+    "reason": "Pass 1 and 2 failed, and no Gemini API key provided for Pass 3 fallback. The format of the document is unrecognized."
+  },
+  "TC5_high_income_surcharge_old_regime.pdf": {
+    "status": "SUCCESS",
+    "gross": 4484000.0,
+    "old_tax": 1188408.0,
+    "new_tax": 938808.0,
+    "recommended": "New"
+  }
+}

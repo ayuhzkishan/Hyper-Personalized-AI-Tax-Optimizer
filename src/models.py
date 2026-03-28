@@ -23,3 +23,6 @@ class ParsedTaxData(BaseModel):
     financial_year: Optional[str] = Field(None, description="Financial Year in YYYY-YY format, e.g. 2024-25")
     income: IncomeDetails = Field(default_factory=IncomeDetails)
     deductions: DeductionDetails = Field(default_factory=DeductionDetails)
+    
+    confidence: str = Field("HIGH", description="Set to 'LOW' if any mandatory fields (TAN, PAN) are completely missing/masked, or if the sum of income components does not mathematically match the stated gross salary, or if tax fields are visibly blank.")
+    warnings: list[str] = Field(default_factory=list, description="List of specific strings detailing exactly why confidence is LOW (e.g. 'PAN is masked', 'Salary sum deviates by 3.1%', 'TDS Q4 missing').")

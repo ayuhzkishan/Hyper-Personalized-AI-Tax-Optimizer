@@ -18,6 +18,7 @@ export default function Dashboard({ data }: { data: any }) {
     const optimization_plan = data.optimization_plan || {};
     const ai_advice = data.ai_advice || "No insights generated.";
     const ca_insights = data.ca_insights || {};
+    const regime_comparison = data.regime_comparison || null;
 
     // Speedometer data
     const taxSaved = optimization_plan.yearly_tax_savings;
@@ -54,23 +55,77 @@ export default function Dashboard({ data }: { data: any }) {
             </h2>
             <p className="text-gray-500 mb-10 max-w-2xl">Based on your precise inputs, our localized solver has found mathematically absolute optimizations for your capital allocation.</p>
 
-            {/* Explicit Regime Comparison Requirement */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex-1 w-full p-8 bg-bone rounded-2xl text-center border border-gray-100 relative overflow-hidden">
-                    <h3 className="text-gray-500 font-bold tracking-widest uppercase text-xs mb-2 flex items-center justify-center gap-2"><Landmark className="w-4 h-4"/> Old Regime Baseline</h3>
-                    <p className="text-4xl font-sans font-medium text-gray-800">₹{current_taxes.old_regime.toLocaleString()}</p>
+            {/* Explicit Dual Regime Minimums Requirement */}
+            {regime_comparison && (
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-stretch justify-between gap-6 mb-8">
+                {/* OLD REGIME CARD */}
+                <div className={`flex-1 w-full p-8 rounded-2xl border relative overflow-hidden flex flex-col justify-between transition-all ${regime_comparison.recommended === 'Old' ? 'bg-wealth-900 border-wealth-800 text-white shadow-xl transform md:scale-105 z-10' : 'bg-bone border-gray-200 text-gray-800'}`}>
+                    {regime_comparison.recommended === 'Old' && <div className="absolute top-0 right-0 bg-gold text-wealth-900 font-bold text-xs uppercase tracking-widest px-4 py-1 rounded-bl-xl shadow-sm">AI Recommended</div>}
+                    <div>
+                        <h3 className={`font-bold tracking-widest uppercase text-xs mb-4 flex items-center gap-2 ${regime_comparison.recommended === 'Old' ? 'text-lime' : 'text-gray-500'}`}><Landmark className="w-4 h-4"/> Old Regime Matrix</h3>
+                        <p className="text-sm opacity-80 mb-1 font-medium">Absolute Minimum Tax</p>
+                        <p className="text-4xl font-sans font-medium mb-8">₹{regime_comparison.old.optimized.toLocaleString()}</p>
+                    </div>
+                    <div className={`pt-4 border-t ${regime_comparison.recommended === 'Old' ? 'border-wealth-700' : 'border-gray-200'}`}>
+                        <div className="mb-4">
+                            <p className="font-bold text-[10px] uppercase tracking-widest opacity-60 mb-2">Itemized Capital Shifts</p>
+                            {Object.entries(optimization_plan).filter(([k, v]) => k !== 'yearly_tax_savings' && Number(v) > 0).map(([k, v]) => (
+                                <div key={k} className="flex justify-between items-center text-xs mb-1.5 opacity-90">
+                                    <span>{k}</span>
+                                    <span className={`font-semibold ${regime_comparison.recommended === 'Old' ? 'text-lime' : 'text-emerald-700'}`}>₹{Number(v).toLocaleString()}</span>
+                                </div>
+                            ))}
+                            {Object.entries(optimization_plan).filter(([k, v]) => k !== 'yearly_tax_savings' && Number(v) > 0).length === 0 && (
+                                <div className="text-xs opacity-60 italic">No structural shifts recommended.</div>
+                            )}
+                        </div>
+                        <div className="flex justify-between items-center text-sm mb-2">
+                            <span className="opacity-80">Unoptimized Baseline:</span>
+                            <span className="font-medium">₹{regime_comparison.old.unoptimized.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="opacity-80">Max Potential Save:</span>
+                            <span className={`font-bold ${regime_comparison.recommended === 'Old' ? 'text-lime' : 'text-emerald-500'}`}>₹{regime_comparison.old.potential_save.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
                 
-                <div className="flex shrink-0 w-12 h-12 bg-white border border-gray-100 shadow-sm rounded-full items-center justify-center font-bold text-wealth-900 text-sm italic font-serif z-10">
+                <div className="flex shrink-0 w-12 h-12 self-center bg-white border border-gray-100 shadow-sm rounded-full items-center justify-center font-bold text-wealth-900 text-sm italic font-serif z-20">
                     VS
                 </div>
 
-                <div className="flex-1 w-full p-8 bg-wealth-900 rounded-2xl text-center shadow-xl relative overflow-hidden transform md:scale-105">
-                    <h3 className="text-lime font-bold tracking-widest uppercase text-xs mb-2 flex items-center justify-center gap-2"><TrendingUp className="w-4 h-4"/> Optimized New Regime</h3>
-                    <p className="text-4xl font-sans font-medium text-white">₹{current_taxes.new_regime.toLocaleString()}</p>
-                    <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl"></div>
+                {/* NEW REGIME CARD */}
+                <div className={`flex-1 w-full p-8 rounded-2xl border relative overflow-hidden flex flex-col justify-between transition-all ${regime_comparison.recommended === 'New' ? 'bg-wealth-900 border-wealth-800 text-white shadow-xl transform md:scale-105 z-10' : 'bg-bone border-gray-200 text-gray-800'}`}>
+                    {regime_comparison.recommended === 'New' && <div className="absolute top-0 right-0 bg-gold text-wealth-900 font-bold text-xs uppercase tracking-widest px-4 py-1 rounded-bl-xl shadow-sm">AI Recommended</div>}
+                    <div>
+                        <h3 className={`font-bold tracking-widest uppercase text-xs mb-4 flex items-center gap-2 ${regime_comparison.recommended === 'New' ? 'text-lime' : 'text-gray-500'}`}><TrendingUp className="w-4 h-4"/> New Regime Matrix</h3>
+                        <p className="text-sm opacity-80 mb-1 font-medium">Absolute Minimum Tax</p>
+                        <p className="text-4xl font-sans font-medium mb-8">₹{regime_comparison.new.optimized.toLocaleString()}</p>
+                    </div>
+                    <div className={`pt-4 border-t ${regime_comparison.recommended === 'New' ? 'border-wealth-700' : 'border-gray-200'}`}>
+                        <div className="mb-4">
+                            <p className="font-bold text-[10px] uppercase tracking-widest opacity-60 mb-2">Itemized Capital Shifts</p>
+                            {ca_insights?.nps_shield?.max_nps_shift > 0 ? (
+                                <div className="flex justify-between items-center text-xs mb-1.5 opacity-90">
+                                    <span>80CCD(2) Corporate NPS</span>
+                                    <span className={`font-semibold ${regime_comparison.recommended === 'New' ? 'text-lime' : 'text-emerald-700'}`}>₹{Number(ca_insights.nps_shield.max_nps_shift).toLocaleString()}</span>
+                                </div>
+                            ) : (
+                                <div className="text-xs opacity-60 italic">No structural shifts recommended.</div>
+                            )}
+                        </div>
+                        <div className="flex justify-between items-center text-sm mb-2">
+                            <span className="opacity-80">Unoptimized Baseline:</span>
+                            <span className="font-medium">₹{regime_comparison.new.unoptimized.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="opacity-80">Max Potential Save:</span>
+                            <span className={`font-bold ${regime_comparison.recommended === 'New' ? 'text-lime' : 'text-emerald-500'}`}>₹{regime_comparison.new.potential_save.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Gamified Speedometer Card */}

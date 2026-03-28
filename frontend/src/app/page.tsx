@@ -2,22 +2,29 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { UploadCloud, ChevronRight, BrainCircuit, ArrowRight, ShieldCheck, LineChart, Sparkles } from "lucide-react";
+import { UploadCloud, ChevronRight, BrainCircuit, ArrowRight, ShieldCheck, LineChart, Sparkles, File, Shield } from "lucide-react";
 import Dashboard from "../components/Dashboard";
 
 export default function Home() {
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   
   // Form States
   const [geminiKey, setGeminiKey] = useState("");
+  const [useOllama, setUseOllama] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [extractionWarnings, setExtractionWarnings] = useState<string[]>([]);
+  const [isLowConfidence, setIsLowConfidence] = useState(false);
   const [gross, setGross] = useState<number | ''>('');
   const [rent, setRent] = useState<number | ''>('');
   const [hraReceived, setHra] = useState<number | ''>('');
   const [isMetro, setIsMetro] = useState(true);
+  const [isSalary, setIsSalary] = useState(true);
+  const [age, setAge] = useState<number | ''>(30);
   const [liquidity, setLiquidity] = useState(3);
   const [riskTol, setRiskTol] = useState(3.0);
+  const [otherDeductions, setOtherDeductions] = useState<number | ''>('');
   
   // Result State
   const [result, setResult] = useState<any>(null);
@@ -37,6 +44,9 @@ export default function Home() {
                 rent_paid: Number(rent) || 0,
                 hra_received: Number(hraReceived) || 0,
                 is_metro: isMetro,
+                is_salary_pension: isSalary,
+                age: Number(age) || 30,
+                other_deductions: Number(otherDeductions) || 0,
                 liquidity_yrs: liquidity,
                 risk_tol: riskTol
             })
@@ -44,8 +54,8 @@ export default function Home() {
         
         const data = await res.json();
         
-        if (!data.success) {
-            setErrorMsg(data.message || data.error || "The AI engine failed to optimize this scenario.");
+        if (!data.success && !data.optimization_plan) {
+            setErrorMsg(data.detail || data.message || data.error || "The AI engine failed to optimize this scenario.");
             setStep(2);
             return;
         }
@@ -79,6 +89,15 @@ export default function Home() {
           const data = await res.json();
           if (data.success) {
               setGross(data.gross_salary);
+              setUploadedFile(file.name);
+              setIsSalary(!data.is_business);
+              if (data.confidence === "LOW") {
+                  setIsLowConfidence(true);
+                  setExtractionWarnings(data.warnings || []);
+              } else {
+                  setIsLowConfidence(false);
+                  setExtractionWarnings([]);
+              }
           } else {
               setErrorMsg(data.message || data.error || "Failed to parse PDF");
           }
@@ -209,16 +228,49 @@ export default function Home() {
                             </div>
                         )}
                         
-                        {/* Drag and Drop Form 16 */}
-                        <div className="border border-dashed border-gray-300 bg-bone rounded-xl p-8 text-center hover:border-wealth-700 hover:bg-gray-50 transition-all cursor-pointer relative mb-10 group">
-                            <input type="file" onChange={handleFileUpload} accept=".pdf" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                            <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                                <UploadCloud className="w-6 h-6 text-wealth-700" />
+                        {/* Drag and Drop Form 16 / Click to Upload */}
+                        {!uploadedFile ? (
+                            <label className="border border-dashed border-gray-300 bg-bone rounded-xl p-8 text-center hover:border-wealth-700 hover:bg-gray-50 transition-all cursor-pointer relative mb-10 group block">
+                                <input type="file" onChange={handleFileUpload} accept=".pdf" className="hidden" />
+                                <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                                    <UploadCloud className="w-6 h-6 text-wealth-700" />
+                                </div>
+                                <h3 className="font-medium text-wealth-900 mb-1">Upload Form 16 / Salary Slip</h3>
+                                <p className="text-gray-500 text-sm focus:outline-none">Click to browse or drag and drop your PDF</p>
+                                {loading && <p className="text-wealth-700 mt-4 text-sm font-semibold animate-pulse">Running extraction tensor...</p>}
+                            </label>
+                        ) : (
+                            <div className={`mb-10 p-5 rounded-2xl max-w-2xl mx-auto shadow-sm animate-in fade-in slide-in-from-top-4 border ${isLowConfidence ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-100'}`}>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-4 flex-1">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-inner ${isLowConfidence ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                            {isLowConfidence ? <span className="font-serif text-2xl font-bold">!</span> : <File className="w-6 h-6"/>}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className={`font-bold text-sm tracking-wide ${isLowConfidence ? 'text-amber-900' : 'text-emerald-900'}`}>
+                                                {isLowConfidence ? 'Corrupt/Missing Fields Detected' : 'Form 16 Synchronized'}
+                                            </p>
+                                            <p className={`text-xs mt-0.5 truncate max-w-[200px] md:max-w-xs ${isLowConfidence ? 'text-amber-700' : 'text-emerald-600'}`}>{uploadedFile}</p>
+                                            
+                                            {isLowConfidence && extractionWarnings.length > 0 && (
+                                                <div className="mt-4 space-y-1">
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800 mb-1.5 opacity-80">AI Verification Fails:</p>
+                                                    {extractionWarnings.map((warn, i) => (
+                                                        <div key={i} className="text-xs text-amber-800 flex gap-2 leading-tight"><span className="text-amber-500 shrink-0">•</span> <span>{warn}</span></div>
+                                                    ))}
+                                                    <p className="text-[11px] text-amber-900 font-medium mt-3 bg-amber-100 border border-amber-200 p-2.5 rounded-lg leading-tight shadow-sm">
+                                                        Please manually verify the Gross Salary below. The optimizer will not function correctly if mathematical integrity is skewed by missing TDS values.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => { setUploadedFile(null); setGross(''); setIsLowConfidence(false); setExtractionWarnings([]); }} className="px-4 py-2 text-xs font-bold text-red-600 bg-white border border-red-100 hover:bg-red-50 rounded-lg uppercase tracking-wider transition-colors shadow-sm focus:ring-2 focus:ring-red-200 flex items-center gap-2 shrink-0">
+                                        <ArrowRight className="w-3 h-3 rotate-180"/> Remove
+                                    </button>
+                                </div>
                             </div>
-                            <h3 className="font-medium text-wealth-900 mb-1">Upload Form 16 / Salary Slip</h3>
-                            <p className="text-gray-500 text-sm">Automated localized NLP Extraction pipeline</p>
-                            {loading && <p className="text-wealth-700 mt-4 text-sm font-semibold animate-pulse">Running extraction tensor...</p>}
-                        </div>
+                        )}
 
                         <div className="flex items-center gap-4 mb-10 opacity-50">
                             <div className="flex-1 h-px bg-gray-200"></div>
@@ -236,6 +288,26 @@ export default function Home() {
                                 <input type="number" placeholder="e.g. 300000" value={hraReceived} onChange={e => setHra(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-bone border border-gray-200 rounded-lg p-3 text-wealth-900 font-medium text-lg focus:ring-1 focus:ring-wealth-900 outline-none transition-all" />
                             </div>
                             <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Age</label>
+                                <input type="number" placeholder="e.g. 30" value={age} onChange={e => setAge(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-bone border border-gray-200 rounded-lg p-3 text-wealth-900 font-medium text-lg focus:ring-1 focus:ring-wealth-900 outline-none transition-all" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Primary Income Source</label>
+                                <div className="flex gap-3 mt-1">
+                                    <button onClick={() => setIsSalary(true)} className={`flex-1 p-3 rounded-lg border font-medium transition-all ${isSalary ? 'bg-wealth-900 border-wealth-900 text-white' : 'bg-bone border-gray-200 text-gray-600 hover:bg-gray-100'}`}>Salary / Pension</button>
+                                    <button onClick={() => setIsSalary(false)} className={`flex-1 p-3 rounded-lg border font-medium transition-all ${!isSalary ? 'bg-wealth-900 border-wealth-900 text-white' : 'bg-bone border-gray-200 text-gray-600 hover:bg-gray-100'}`}>Business / Pro</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 mb-10 opacity-50">
+                            <div className="flex-1 h-px bg-gray-200"></div>
+                            <span className="text-gray-500 text-xs font-bold tracking-widest uppercase">Property & Location</span>
+                            <div className="flex-1 h-px bg-gray-200"></div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                            <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Actual Rent Disbursed (₹)</label>
                                 <input type="number" placeholder="e.g. 400000" value={rent} onChange={e => setRent(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-bone border border-gray-200 rounded-lg p-3 text-wealth-900 font-medium text-lg focus:ring-1 focus:ring-wealth-900 outline-none transition-all" />
                             </div>
@@ -244,6 +316,26 @@ export default function Home() {
                                 <div className="flex gap-3 mt-1">
                                     <button onClick={() => setIsMetro(true)} className={`flex-1 p-3 rounded-lg border font-medium transition-all ${isMetro ? 'bg-wealth-900 border-wealth-900 text-white' : 'bg-bone border-gray-200 text-gray-600 hover:bg-gray-100'}`}>Yes</button>
                                     <button onClick={() => setIsMetro(false)} className={`flex-1 p-3 rounded-lg border font-medium transition-all ${!isMetro ? 'bg-wealth-900 border-wealth-900 text-white' : 'bg-bone border-gray-200 text-gray-600 hover:bg-gray-100'}`}>No</button>
+                                </div>
+                            </div>
+                            <div className="md:col-span-2 mt-2 bg-bone p-5 rounded-xl border border-gray-200 shadow-sm">
+                                <label className="block text-sm font-bold text-wealth-900 uppercase tracking-wider mb-3">
+                                    Fixed Structural Deductions (₹) <span className="text-gray-400 normal-case font-medium ml-2">— Legacy & Sunk-Cost Obligations</span>
+                                </label>
+                                <input type="number" placeholder="Enter total combined amount... e.g. 200000" value={otherDeductions} onChange={e => setOtherDeductions(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-white border border-gray-200 rounded-lg p-4 text-wealth-900 font-medium text-xl focus:ring-2 focus:ring-wealth-900 outline-none transition-all placeholder:text-gray-300 mb-5 shadow-inner" />
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-600 mb-5 font-medium border-b border-gray-200 pb-5">
+                                    <div className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-wealth-500 mt-1 shrink-0"></div> <div><span className="font-bold text-gray-800">Sec 24(b)</span><br/>Home Loan Interest (Max 2L)</div></div>
+                                    <div className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-wealth-500 mt-1 shrink-0"></div> <div><span className="font-bold text-gray-800">Sec 80E</span><br/>Education Loan Interest</div></div>
+                                    <div className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-wealth-500 mt-1 shrink-0"></div> <div><span className="font-bold text-gray-800">Sec 80G</span><br/>Approved Charity Donations</div></div>
+                                    <div className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-wealth-500 mt-1 shrink-0"></div> <div><span className="font-bold text-gray-800">Sec 80TTA/80U</span><br/>Savings Int. & Disability</div></div>
+                                </div>
+                                
+                                <div className="bg-lime/20 border border-lime/40 p-3.5 rounded-lg flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-wealth-900 text-lime flex items-center justify-center font-bold text-[10px] shrink-0">AI</div>
+                                    <p className="text-xs text-wealth-900 font-medium leading-relaxed">
+                                        <span className="font-bold tracking-wide">Do NOT add 80C, 80D, or NPS here.</span> The overarching PuLP tensor actively optimizes fresh capital allocation for those exact sections dynamically. Only aggregate your pre-existing fixed liabilities.
+                                    </p>
                                 </div>
                             </div>
                         </div>

@@ -4,7 +4,7 @@ Designed to be maintained locally rather than depending on slow-to-update PyPI p
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 
 @dataclass
 class TaxConfig:
@@ -75,38 +75,82 @@ class TaxEngine:
         self.regime = regime
         self.config = TAX_RULES[self.fy][self.regime]
 
-    def _calculate_surcharge(self, taxable_income: float, base_tax: float) -> float:
-        """Calculates surcharge on base tax."""
-        if taxable_income > 50000000:  # > 5 Cr
-            rate = 0.25 if self.regime == "new" else 0.37
-            surcharge = base_tax * rate
-            # Add marginal relief logic if needed, simplify for now
-            return surcharge
-        elif taxable_income > 20000000: # > 2 Cr
-            return base_tax * 0.25
-        elif taxable_income > 10000000: # > 1 Cr
-            return base_tax * 0.15
-        elif taxable_income > 5000000:  # > 50L
-            return base_tax * 0.10
-        return 0.0
-
-    def calculate_tax(self, gross_income: float, deductions: float) -> Dict[str, float]:
-        """Calculates exact tax breakdown for a given gross income and valid deductions."""
+    def _get_adjusted_slabs(self, age: int) -> List[Tuple[int, float]]:
+        if self.regime == "new" or age < 60:
+            return self.config.slabs
         
-        # 1. Apply Standard Deduction & other itemized deductions
-        taxable_income = max(0.0, gross_income - self.config.standard_deduction - deductions)
+        # Modify Old Regime 1st slab for Senior/Super Senior
+        slabs = list(self.config.slabs)
+        if age >= 80:
+            slabs[0] = (500000, 0.0)
+        elif age >= 60:
+            slabs[0] = (300000, 0.0)
+        return slabs
 
-        # 2. Base tax per slabs
+    def _compute_base_tax(self, income: float, age: int) -> float:
         base_tax = 0.0
         previous_limit = 0.0
-        
-        for limit, rate in self.config.slabs:
-            if taxable_income > previous_limit:
-                taxable_amount_in_slab = min(taxable_income, limit) - previous_limit
-                base_tax += taxable_amount_in_slab * rate
+        for limit, rate in self._get_adjusted_slabs(age):
+            if income > previous_limit:
+                tax_amt = min(income, limit) - previous_limit
+                base_tax += tax_amt * rate
                 previous_limit = limit
             else:
                 break
+        return base_tax
+
+    def _calculate_surcharge(self, taxable_income: float, base_tax: float, age: int) -> Tuple[float, float]:
+        """Calculates surcharge on base tax and any marginal relief."""
+        threshold = 0
+        rate = 0.0
+        surcharge_rate_at_threshold = 0.0
+        
+        if taxable_income > 50000000:  # > 5 Cr
+            threshold, rate = 50000000, (0.25 if self.regime == "new" else 0.37)
+            surcharge_rate_at_threshold = 0.25
+        elif taxable_income > 20000000: # > 2 Cr
+            threshold, rate = 20000000, 0.25
+            surcharge_rate_at_threshold = 0.15
+        elif taxable_income > 10000000: # > 1 Cr
+            threshold, rate = 10000000, 0.15
+            surcharge_rate_at_threshold = 0.10
+        elif taxable_income > 5000000:  # > 50L
+            threshold, rate = 5000000, 0.10
+            surcharge_rate_at_threshold = 0.0
+        else:
+            return 0.0, 0.0
+            
+        surcharge = base_tax * rate
+        marginal_relief = 0.0
+        
+        # Surcharge Marginal Relief Calculation
+        if threshold > 0:
+            tax_at_threshold = self._compute_base_tax(threshold, age)
+            surcharge_at_threshold = tax_at_threshold * surcharge_rate_at_threshold
+            
+            tax_payable_now = base_tax + surcharge
+            max_tax_payable = tax_at_threshold + surcharge_at_threshold + (taxable_income - threshold)
+            
+            if tax_payable_now > max_tax_payable:
+                marginal_relief = tax_payable_now - max_tax_payable
+                surcharge = surcharge - marginal_relief
+                
+        return surcharge, marginal_relief
+
+    def calculate_tax(self, gross_income: float, deductions: float, is_salary_pension: bool = True, age: int = 30) -> Dict[str, Any]:
+        """Calculates exact tax breakdown for a given gross income, valid deductions, income type, and age."""
+        
+        # Regime Warning flag (Nice-to-have functionality)
+        invalid_deductions_warning = False
+        if self.regime == "new" and deductions > 0:
+            invalid_deductions_warning = True # Most Chapter VI-A are invalid, assuming caller has filtered or it's 80CCD(2).
+            
+        # 1. Apply Standard Deduction & other itemized deductions
+        std_deduction = self.config.standard_deduction if is_salary_pension else 0
+        taxable_income = max(0.0, gross_income - std_deduction - deductions)
+
+        # 2. Base tax per slabs
+        base_tax = self._compute_base_tax(taxable_income, age)
 
         # 3. 87A Rebate & Marginal Relief
         rebate_87a = 0.0
@@ -125,8 +169,8 @@ class TaxEngine:
             else:
                 base_tax_after_rebate = base_tax
 
-        # 4. Surcharge
-        surcharge = self._calculate_surcharge(taxable_income, base_tax_after_rebate)
+        # 4. Surcharge & Surcharge Marginal Relief
+        surcharge, surcharge_margin_relief = self._calculate_surcharge(taxable_income, base_tax_after_rebate, age)
 
         # 5. Cess
         cess = (base_tax_after_rebate + surcharge) * self.config.cess_rate
@@ -142,6 +186,8 @@ class TaxEngine:
             "rebate_87a": rebate_87a,
             "marginal_relief_87a": marginal_relief,
             "surcharge": surcharge,
+            "surcharge_marginal_relief": surcharge_margin_relief,
             "cess": cess,
-            "total_tax": total_tax
+            "total_tax": total_tax,
+            "regime_warning": invalid_deductions_warning
         }

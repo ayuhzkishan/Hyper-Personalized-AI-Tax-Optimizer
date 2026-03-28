@@ -33,10 +33,12 @@ class PDFParser:
             )
         
         data = self._pass3_llm(file_path)
-        if self._validate_checksum(data, tolerance=0.05):
+        if data:
+            if data.confidence != "HIGH" and data.income.total_gross_income <= 0:
+                raise ValueError("Failed to parse PDF accurately across all 3 passes. Gross salary could not be identified.")
             return data
             
-        raise ValueError("Failed to parse PDF accurately across all 3 passes. Checksum validation failed.")
+        raise ValueError("Failed to parse PDF accurately across all 3 passes. Parsing returned None.")
 
     def _pass1_form16x(self, file_path: str) -> Optional[ParsedTaxData]:
         # Form16x mock implementation
@@ -75,7 +77,7 @@ class PDFParser:
                 
             response = self.genai_client.models.generate_content(
                 model='gemini-2.5-flash',
-                contents=f"Extract exact tax details from this document and output JSON:\n{text}",
+                contents=f"Extract exact tax details from this document and output JSON. CRITICAL: If mandatory fields like TAN are missing, PAN is masked, salary components do not mathematically sum to the gross payload (e.g. 3.1% gaps), TDS metrics are missing, or it contains structured Freelance 44ADA / Gig Worker data loosely aligned to Form 16, YOU MUST explicitly set `confidence` to 'LOW' and detail the exact deviations in the `warnings` array.\n\nDocument Text:\n{text}",
                 config={
                     'response_mime_type': 'application/json',
                     'response_schema': ParsedTaxData,
