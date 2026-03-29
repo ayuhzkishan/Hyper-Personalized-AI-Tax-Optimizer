@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { UploadCloud, ChevronRight, BrainCircuit, ArrowRight, ShieldCheck, LineChart, Sparkles, File, Shield } from "lucide-react";
+import { UploadCloud, ChevronRight, BrainCircuit, ArrowRight, ShieldCheck, LineChart, Sparkles, File, Shield, Download } from "lucide-react";
 import Dashboard from "../components/Dashboard";
 
 export default function Home() {
@@ -40,6 +40,7 @@ export default function Home() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 gemini_key: geminiKey || null,
+                use_ollama: useOllama,
                 gross_salary: Number(gross) || 0,
                 rent_paid: Number(rent) || 0,
                 hra_received: Number(hraReceived) || 0,
@@ -70,6 +71,20 @@ export default function Home() {
         setLoading(false);
     }
   }
+
+  const handleExportJSON = () => {
+      if (!result) return;
+      const jsonString = JSON.stringify(result, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tax_optimization_plan_FY25.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -188,17 +203,35 @@ export default function Home() {
                         <h2 className="text-3xl font-serif text-wealth-900 mb-2">Engine Configuration</h2>
                         <p className="text-gray-500 mb-8 text-sm">Strictly configure your AI backend environment.</p>
                         
-                        <div>
-                            <label className="block text-sm font-semibold text-wealth-900 mb-3 uppercase tracking-wider">Gemini Cloud API Key (Optional)</label>
-                            <input 
-                                type="password"
-                                value={geminiKey}
-                                onChange={e => setGeminiKey(e.target.value)}
-                                placeholder="Paste API Key..."
-                                className="w-full bg-bone border border-gray-200 rounded-lg p-4 focus:ring-2 focus:ring-wealth-900 focus:outline-none transition-all placeholder:text-gray-400" 
-                            />
-                            <p className="text-xs text-gray-400 mt-2">Required for advanced AI Narrative generation and Vision-based Form 16 extraction.</p>
+                        
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-semibold text-wealth-900 mb-3 uppercase tracking-wider">Gemini Cloud API Key (Optional)</label>
+                                <input 
+                                    type="password"
+                                    value={geminiKey}
+                                    onChange={e => setGeminiKey(e.target.value)}
+                                    placeholder="Paste API Key..."
+                                    className="w-full bg-bone border border-gray-200 rounded-lg p-4 focus:ring-2 focus:ring-wealth-900 focus:outline-none transition-all placeholder:text-gray-400" 
+                                    disabled={useOllama}
+                                />
+                                <p className="text-xs text-gray-400 mt-2">Required for advanced AI Narrative generation and Vision-based Form 16 extraction.</p>
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 bg-bone border border-gray-200 rounded-lg">
+                                <div>
+                                    <p className="text-sm font-bold text-wealth-900 uppercase tracking-wider">Local Privacy Mode</p>
+                                    <p className="text-[11px] text-gray-500 font-medium">Use Ollama (Llama 3.1) locally instead of cloud APIs.</p>
+                                </div>
+                                <button 
+                                    onClick={() => { setUseOllama(!useOllama); if (!useOllama) setGeminiKey(''); }}
+                                    className={`w-12 h-6 rounded-full relative transition-colors ${useOllama ? 'bg-lime' : 'bg-gray-300'}`}
+                                >
+                                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${useOllama ? 'translate-x-[26px]' : 'translate-x-0.5'}`} />
+                                </button>
+                            </div>
                         </div>
+
                         <button 
                             onClick={() => setStep(2)}
                             className="mt-10 w-full bg-wealth-900 text-white rounded-lg p-4 font-medium flex items-center justify-center gap-2 hover:bg-wealth-800 transition-colors shadow-md"
@@ -399,7 +432,10 @@ export default function Home() {
             {step === 4 && result && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} key="step4" className="max-w-5xl mx-auto">
                      <Dashboard data={result} />
-                     <div className="text-center mt-16">
+                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-16">
+                        <button onClick={handleExportJSON} className="flex items-center gap-2 bg-wealth-900 text-white font-medium px-8 py-3 rounded-lg hover:bg-wealth-800 transition-colors shadow-md">
+                            <Download className="w-4 h-4" /> Export ITR JSON
+                        </button>
                         <button onClick={() => setStep(2)} className="text-wealth-900 font-medium border border-gray-300 bg-white px-8 py-3 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
                             Configure New Scenario
                         </button>
